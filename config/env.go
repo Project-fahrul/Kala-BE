@@ -8,9 +8,12 @@ import (
 )
 
 func LoadEnvirolment() {
-	projectDirName := "Upgrade" //edit
+	projectDirName := "kala-be-upgrade" //edit
 	projectName := regexp.MustCompile(`^(.*` + projectDirName + `)`)
 	currentWorkDirectory, _ := os.Getwd()
 	rootPath := projectName.Find([]byte(currentWorkDirectory))
-	godotenv.Load(string(rootPath) + "/.env")
+	err := godotenv.Load(string(rootPath) + "/.env")
+	if err != nil {
+		panic(err)
+	}
 }

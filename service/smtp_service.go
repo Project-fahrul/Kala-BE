@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"net/mail"
 	"net/smtp"
 	"os"
 	"strconv"
@@ -42,30 +43,47 @@ func SMTP_New() *SmtpCredential {
 	return smtpCredential
 }
 
-func (s *SmtpCredential) SendConfirmMail(to string, message string) error {
+func (s *SmtpCredential) SendConfirmMail(title string, to string, message string) error {
 	dest := []string{to}
-	messageBody := s.composeMessageBody(dest, "TEST", message)
+	messageBody := s.composeMessageBody(dest, title, message)
 	return s.sending(dest, messageBody)
 }
 
-func (s *SmtpCredential) composeMessageBody(dest []string, subject string, msg string) string {
-	body := "From: " + s.senderName + "\n" +
-		"To: " + strings.Join(dest, ",") + "\n" +
-		"Subject: " + subject + "\n\n" +
-		composeMessage(msg)
+func encodeRFC2047(String string) string {
+	// use mail's rfc2047 to encode any string
+	addr := mail.Address{
+		Name:    String,
+		Address: "",
+	}
+	return strings.Trim(addr.String(), " <>")
+}
 
-	return body
+func (s *SmtpCredential) composeMessageBody(dest []string, subject string, msg string) string {
+
+	header := make(map[string]string)
+	header["From"] = s.senderName
+	header["To"] = strings.Join(dest, ",")
+	header["Subject"] = subject
+	header["MIME-Version"] = "1.0"
+	header["Content-Type"] = "text/html; charset=\"utf-8\""
+
+	message := ""
+	for k, v := range header {
+		message += fmt.Sprintf("%s: %s\r\n", k, v)
+	}
+	message += "\r\n" + composeMessage(msg)
+	return message
 }
 
 func composeMessage(msg string) string {
-	return fmt.Sprintf("<a href='%s'>Click to confirm</a>", msg)
+	return fmt.Sprintf("<html><body>Untuk Konfirmasi, <a href='%s'>Click Me</a></body></html>", msg)
 }
 
 func (s *SmtpCredential) sending(dest []string, msg string) error {
 	auth := smtp.PlainAuth("", s.authEmail, s.authPassword, s.host)
 	smptpAddress := fmt.Sprintf("%s:%d", s.host, s.port)
 
-	err := smtp.SendMail(smptpAddress, auth, s.authEmail, dest, []byte(msg))
+	err := smtp.SendMail(smptpAddress, auth, s.senderName, dest, []byte(msg))
 	if err != nil {
 		return err
 	}

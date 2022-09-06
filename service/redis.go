@@ -15,7 +15,7 @@ var redisService *RedisService = nil
 
 func Redis_New() *RedisService {
 	if redisService == nil {
-		redisStore, err := redis.NewStore(10, "tcp", fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PASSWORD")), os.Getenv("REDIS_PASSWORD"), []byte("secret"))
+		redisStore, err := redis.NewStore(10, "tcp", fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")), os.Getenv("REDIS_PASSWORD"), []byte("KALAXREDIS"))
 		if err != nil {
 			panic(err.Error())
 		}

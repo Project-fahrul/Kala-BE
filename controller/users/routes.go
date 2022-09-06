@@ -1,6 +1,7 @@
 package users
 
 import (
+	"encoding/json"
 	"fmt"
 	"kala/model"
 	"kala/repository"
@@ -26,7 +27,7 @@ type selectUserBindingJSON struct {
 	Email string `json:"email"`
 }
 
-type forgotUserBindingJSON struct {
+type confirmUserBindingJSON struct {
 	selectUserBindingJSON
 	RedirectLink string `json:"link"`
 }
@@ -39,15 +40,16 @@ type passwordBindingJSON struct {
 
 const REDIS_TOKEN_EXP = 60 * util.TOKENEXPIRED
 
-func UserRegisterRoutes(c *gin.RouterGroup) {
+func UserRegisterRoutes(c *gin.RouterGroup, ctx *gin.Engine) {
 	c.POST("/user", createUserSalesORAdminByAdmin)
-	c.PUT("/user", updateUserSalesORAdminByAdmin)
-	c.DELETE("/user", deleteSalesOrAdminByAdmin)
+	c.PUT("/user/:id", updateUserSalesORAdminByAdmin)
+	c.DELETE("/user/:id", deleteSalesOrAdminByAdmin)
 	c.GET("/user", selectUsers)
 
-	c.POST("/user/forgot-password", forgotPasswordByEmail)
-	c.GET("user/confirm", confirmToken)
-	c.PATCH("user/change-password", changePassword)
+	ctx.POST("/user/forgot-password", forgotPasswordByEmail)
+	ctx.GET("/user/confirm-token", confirmToken)
+	ctx.PATCH("/user/change-password", changePassword)
+	ctx.POST("/user/confirm-user", sendConfirmAccountToken)
 }
 
 func createUserSalesORAdminByAdmin(c *gin.Context) {
@@ -76,7 +78,7 @@ func createUserSalesORAdminByAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
 		return
 	}
-	c.JSON(http.StatusCreated, model.HTTPResponse_Data("Success"))
+	c.JSON(http.StatusCreated, gin.H{})
 }
 
 func updateUserSalesORAdminByAdmin(c *gin.Context) {
@@ -113,7 +115,7 @@ func updateUserSalesORAdminByAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
 		return
 	}
-	c.JSON(http.StatusCreated, model.HTTPResponse_Data("Success"))
+	c.JSON(http.StatusOK, gin.H{})
 }
 
 func deleteSalesOrAdminByAdmin(c *gin.Context) {
@@ -135,7 +137,7 @@ func deleteSalesOrAdminByAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{})
+	c.JSON(http.StatusOK, gin.H{})
 }
 
 func selectUsers(c *gin.Context) {
@@ -151,16 +153,29 @@ func selectUsers(c *gin.Context) {
 
 	users, err := repository.User_New().FindAll(offset, limit, role)
 
+	var jsonMap []map[string]interface{}
+	jsonM, err := json.Marshal(users)
+	json.Unmarshal(jsonM, &jsonMap)
+
+	for i := 0; i < len(jsonMap); i++ {
+
+		for _, k := range []string{"password", "token", "token_expired", "login_delay"} {
+			if _, ok := jsonMap[i][k]; ok {
+				delete(jsonMap[i], k)
+			}
+		}
+	}
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
 		return
 	}
-	c.JSON(http.StatusCreated, users)
+	c.JSON(http.StatusOK, model.HTTPResponse_Data(jsonMap))
 
 }
 
 func forgotPasswordByEmail(c *gin.Context) {
-	var binding forgotUserBindingJSON
+	var binding confirmUserBindingJSON
 
 	err := c.ShouldBindJSON(&binding)
 	if err != nil {
@@ -176,12 +191,12 @@ func forgotPasswordByEmail(c *gin.Context) {
 	}
 
 	token, err := util.TokenGenerator(util.TOKEN_CHANGE_PASSWORD, user.Email)
-	link := fmt.Sprintf("%s?token=%s&email=%s", binding.RedirectLink, token, user.Email)
+	link := fmt.Sprintf("%s?token=%s", binding.RedirectLink, token)
 
 	err = service.Redis_New().SetWithExp(fmt.Sprintf("%s:changePassword", user.Email), token, REDIS_TOKEN_EXP)
 
 	if err == nil {
-		err = service.SMTP_New().SendConfirmMail(user.Email, link)
+		err = service.SMTP_New().SendConfirmMail("Lupa Password", user.Email, link)
 	}
 
 	if err != nil {
@@ -189,14 +204,15 @@ func forgotPasswordByEmail(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{})
+	c.JSON(http.StatusOK, gin.H{})
 }
 
 func confirmToken(c *gin.Context) {
 
-	token := c.DefaultQuery("token", "none")
-	email := c.DefaultQuery("email", "none")
+	token := c.DefaultQuery("token", "")
+	email := c.DefaultQuery("email", "")
 	keyword := c.DefaultQuery("keyword", "changePassword")
+	test := c.DefaultQuery("testing", "true")
 
 	if token == "" || email == "" {
 		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message("Token or email invalid"))
@@ -207,6 +223,18 @@ func confirmToken(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
 		return
+	}
+
+	if test != "true" {
+		service.Redis_New().Del(fmt.Sprintf("%s:%s", email, keyword))
+	}
+
+	if keyword == "confirmAccount" {
+		user, err := repository.User_New().FindUserByEmail(email)
+		if err == nil {
+			user.Verified = true
+			repository.User_New().UpdateUser(user)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{})
@@ -246,4 +274,37 @@ func changePassword(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{})
 	return
+}
+
+func sendConfirmAccountToken(c *gin.Context) {
+	var binding confirmUserBindingJSON
+
+	err := c.ShouldBindJSON(&binding)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	user, err := repository.User_New().FindUserByEmail(binding.Email)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
+		return
+	}
+
+	token, err := util.TokenGenerator(util.TOKEN_CONFIRM_ACCOUNT, user.Email)
+	link := fmt.Sprintf("%s?token=%s&email=%s", binding.RedirectLink, token, user.Email)
+
+	err = service.Redis_New().SetWithExp(fmt.Sprintf("%s:confirmAccount", user.Email), token, REDIS_TOKEN_EXP)
+
+	if err == nil {
+		err = service.SMTP_New().SendConfirmMail("Konfirmasi Akun", user.Email, link)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.HTTPResponse_Message(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{})
 }

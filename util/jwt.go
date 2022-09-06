@@ -2,6 +2,7 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -19,13 +20,14 @@ type JWT struct {
 }
 
 type jwtClaims struct {
-	email string
-	name  string
-	role  string
+	Email string
+	Name  string
+	Role  string
 	jwt.StandardClaims
 }
 
 func JWT_New(name string, email string, role string, timeOffset int) *JWT {
+	fmt.Println(getSignature())
 	return &JWT{
 		signature:  getSignature(),
 		timeOffset: timeOffset,
@@ -53,19 +55,19 @@ func (j *JWT) GenerateToken() (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtClaims{
-		email: j.UserEmail,
-		name:  j.UserName,
-		role:  j.UserRole,
-		StandardClaims: jwt.StandardClaims{
+		j.UserEmail,
+		j.UserName,
+		j.UserRole,
+		jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Duration(exp) * time.Minute).Unix(),
 		},
 	})
 
-	return token.SignedString(j.signature)
+	return token.SignedString([]byte(j.signature))
 }
 
 func (j *JWT) VerifyToken(token string) (*JWT, error) {
-	verifyToken, err := jwt.ParseWithClaims(token, jwtClaims{}, func(t *jwt.Token) (interface{}, error) {
+	verifyToken, err := jwt.ParseWithClaims(token, &jwtClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(j.signature), nil
 	})
 
@@ -74,9 +76,9 @@ func (j *JWT) VerifyToken(token string) (*JWT, error) {
 	}
 
 	if claim, ok := verifyToken.Claims.(*jwtClaims); ok && verifyToken.Valid {
-		j.UserEmail = claim.email
-		j.UserName = claim.name
-		j.UserRole = claim.role
+		j.UserEmail = claim.Email
+		j.UserName = claim.Name
+		j.UserRole = claim.Role
 	} else {
 		return nil, errors.New("Claim token error")
 	}
@@ -85,6 +87,7 @@ func (j *JWT) VerifyToken(token string) (*JWT, error) {
 }
 
 func (j *JWT) CheckingThisIsAdmin() error {
+	fmt.Println(strings.ToLower(j.UserRole))
 	if strings.ToLower(j.UserRole) == "admin" {
 		return nil
 	}

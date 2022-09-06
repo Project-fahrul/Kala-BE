@@ -14,8 +14,10 @@ import (
 
 const (
 	TOKEN_CHANGE_PASSWORD = 1
+	TOKEN_CONFIRM_ACCOUNT = 1
 
 	keyTokenChangePasswor = "CHANGE_PASSWORD"
+	keyTokenConfirmToken  = "TOKEN_CONFIRM_ACCOUNT"
 	secret                = "abc&1*~#^2^#s0^=)^^7%b34"
 	TOKENEXPIRED          = 5
 )
@@ -35,7 +37,7 @@ func TokenGenerator(tokenType int, email string) (res string, e error) {
 		"expr":  expiredStr,
 	}
 
-	if tokenType == TOKEN_CHANGE_PASSWORD {
+	if tokenType == TOKEN_CHANGE_PASSWORD || tokenType == TOKEN_CONFIRM_ACCOUNT {
 		data["key"] = keyTokenChangePasswor
 	} else {
 		panic("key token invalid")
