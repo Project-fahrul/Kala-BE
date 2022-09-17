@@ -25,6 +25,11 @@ func EvidanceRepository_New() *EvidanceRepositoryImpl {
 	return db
 }
 
+func (d *EvidanceRepositoryImpl) UploadFile(e entity.Evidances) error {
+	err := d.db.Table("kala.evidances").Model(entity.EvidancesUpdate{}).Where("sales_id = ? and customer_id = ? and due_date = ? and type_evidance = ?", e.CustomerID, e.SalesID, e.DueDate, e.TypeEvidance).Updates(e)
+	return err.Error
+}
+
 func (d *EvidanceRepositoryImpl) ListEvidance() ([]model.ListEvidance, error) {
 	data := make([]model.ListEvidance, 0)
 

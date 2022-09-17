@@ -11,3 +11,9 @@ type Evidances struct {
 	Comment      string    `json:"comment"`
 	TypeEvidance string    `json:"type_evidance"`
 }
+
+type EvidancesUpdate struct {
+	SubmitDate time.Time `json:"submit_date"`
+	Content    string    `json:"content"`
+	Comment    string    `json:"comment"`
+}

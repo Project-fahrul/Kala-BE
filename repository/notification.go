@@ -3,13 +3,16 @@ package repository
 import (
 	"fmt"
 	"kala/config"
+	"kala/exception"
 	"kala/model"
+	"kala/repository/entity"
 
 	"gorm.io/gorm"
 )
 
 type NotificationRepository interface {
 	ListAllNotificationBySalesID(id int) ([]model.ListNotifiation, error)
+	Delete(e entity.Evidances)
 }
 
 type NotificationRepositoryImpl struct {
@@ -26,6 +29,11 @@ func Notification_New() NotificationRepository {
 	}
 
 	return notif
+}
+
+func (n *NotificationRepositoryImpl) Delete(e entity.Evidances) {
+	err := n.db.Where("sales_id = ? and customer_id = ? and type_notification = ?", e.SalesID, e.CustomerID, e.TypeEvidance).Delete(entity.Notifications{})
+	exception.ResponseStatusError_New(err.Error)
 }
 
 func (n *NotificationRepositoryImpl) ListAllNotificationBySalesID(id int) ([]model.ListNotifiation, error) {

@@ -5,6 +5,7 @@ import (
 	"kala/exception"
 	"kala/model"
 	"kala/repository"
+	"kala/repository/entity"
 	"net/http"
 	"strconv"
 	"time"
@@ -38,18 +39,30 @@ func getEvidance(c *gin.Context) {
 }
 
 func uploadFile(c *gin.Context) {
-	customer_id := c.PostForm("customer_id")
-	sales_id := c.PostForm("sales_id")
+	customer_id, _ := strconv.Atoi(c.PostForm("customer_id"))
+	sales_id, _ := strconv.Atoi(c.PostForm("sales_id"))
 	message := c.PostForm("message")
 	typeEvidance := c.PostForm("type")
-	image, err := c.FormFile("image")
+	// image, err := c.FormFile("image")
 
-	if err != nil {
-		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
-		return
+	// if err != nil {
+	// 	c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
+	// 	return
+	// }
+
+	ev := entity.Evidances{
+		SalesID:      sales_id,
+		CustomerID:   customer_id,
+		SubmitDate:   time.Now(),
+		TypeEvidance: typeEvidance,
+		Comment:      message,
 	}
 
-	fmt.Printf("%s,%s,%s,%s,%s\n", customer_id, sales_id, message, typeEvidance, image.Filename)
+	fmt.Printf("%+v", ev)
+	repository.Notification_New().Delete(ev)
+
+	err := repository.EvidanceRepository_New().UploadFile(ev)
+	exception.ResponseStatusError_New(err)
 	c.JSON(http.StatusCreated, gin.H{})
 }
 
