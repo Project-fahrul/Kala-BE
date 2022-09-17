@@ -3,6 +3,7 @@ package users
 import (
 	"encoding/json"
 	"fmt"
+	"kala/exception"
 	"kala/model"
 	"kala/repository"
 	"kala/repository/entity"
@@ -24,7 +25,7 @@ type createUserJSONBinding struct {
 }
 
 type selectUserBindingJSON struct {
-	Email string `json:"email"`
+	Email string `json:"email" binding:"required"`
 }
 
 type confirmUserBindingJSON struct {
@@ -33,9 +34,8 @@ type confirmUserBindingJSON struct {
 }
 
 type passwordBindingJSON struct {
-	Token    string `json:"token"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	selectUserBindingJSON
+	Password string `json:"password" binding:"required"`
 }
 
 const REDIS_TOKEN_EXP = 60 * util.TOKENEXPIRED
@@ -45,11 +45,67 @@ func UserRegisterRoutes(c *gin.RouterGroup, ctx *gin.Engine) {
 	c.PUT("/user/:id", updateUserSalesORAdminByAdmin)
 	c.DELETE("/user/:id", deleteSalesOrAdminByAdmin)
 	c.GET("/user", selectUsers)
+	c.GET("/me", me)
+	c.GET("/user/:id", getUser)
 
-	ctx.POST("/user/forgot-password", forgotPasswordByEmail)
-	ctx.GET("/user/confirm-token", confirmToken)
+	// ctx.POST("/user/forgot-password", forgotPasswordByEmail)
+	// ctx.GET("/user/confirm-token", confirmToken)
 	ctx.PATCH("/user/change-password", changePassword)
-	ctx.POST("/user/confirm-user", sendConfirmAccountToken)
+	// ctx.POST("/user/confirm-user", sendConfirmAccountToken)
+	ctx.POST("/user/email", userByEmail)
+	c.GET("/user/sales", allSales)
+}
+
+func getUser(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	user, err := repository.User_New().FindUserByID(id)
+	exception.ResponseStatusError_New(err)
+	c.JSON(http.StatusOK, model.HTTPResponse_Data(user))
+}
+
+func allSales(c *gin.Context) {
+	sales, err := repository.User_New().FindAllSales()
+	exception.ResponseStatusError_New(err)
+
+	c.JSON(http.StatusOK, model.HTTPResponse_Data(sales))
+}
+
+func userByEmail(c *gin.Context) {
+	var user selectUserBindingJSON
+	err := c.ShouldBindJSON(&user)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
+		return
+	}
+	getuser, err := repository.User_New().FindUserByEmail(user.Email)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
+		return
+	}
+	var pswd bool = true
+	if len(getuser.Password) == 0 {
+		pswd = false
+	}
+	c.JSON(http.StatusOK, model.HTTPResponse_Data(map[string]interface{}{
+		"name":       getuser.Name,
+		"phone":      getuser.PhoneNumber,
+		"email":      getuser.Email,
+		"registered": pswd,
+	}))
+}
+
+func me(c *gin.Context) {
+	_jwt := ctr.GetJWT(c)
+	user, err := repository.User_New().FindUserByEmail(_jwt.UserEmail)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{})
+		return
+	}
+	c.JSON(http.StatusOK, model.HTTPResponse_Data(map[string]interface{}{
+		"name": user.Name,
+		"role": user.Role,
+	}))
 }
 
 func createUserSalesORAdminByAdmin(c *gin.Context) {
@@ -73,6 +129,8 @@ func createUserSalesORAdminByAdmin(c *gin.Context) {
 	users.PhoneNumber = binding.PhoneNumber
 	users.Role = binding.Role
 
+	fmt.Printf("%v", users)
+
 	err = repository.User_New().CreateUser(&users)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
@@ -83,7 +141,7 @@ func createUserSalesORAdminByAdmin(c *gin.Context) {
 
 func updateUserSalesORAdminByAdmin(c *gin.Context) {
 	var binding createUserJSONBinding
-
+	fmt.Println("aasaxok")
 	_jwt := ctr.GetJWT(c)
 
 	err := c.ShouldBindJSON(&binding)
@@ -109,6 +167,8 @@ func updateUserSalesORAdminByAdmin(c *gin.Context) {
 	users.PhoneNumber = binding.PhoneNumber
 	users.Role = binding.Role
 	users.ID = id
+
+	fmt.Printf("%v", users)
 
 	err = repository.User_New().UpdateUser(&users)
 	if err != nil {
@@ -249,13 +309,6 @@ func changePassword(c *gin.Context) {
 		return
 	}
 
-	err = util.ValidateWithToken(binding.Token, binding.Email, "changePassword", true)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
-		return
-	}
-
-	service.Redis_New().Del(fmt.Sprintf("%s:changePassword", binding.Email))
 	user, err := repository.User_New().FindUserByEmail(binding.Email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message("User not found"))

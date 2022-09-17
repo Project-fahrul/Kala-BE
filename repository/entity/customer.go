@@ -16,4 +16,11 @@ type Customers struct {
 	Leasing       string    `json:"leasing"`
 	SalesID       int       `json:"sales_id"`
 	NewCustomer   bool      `json:"new_customer"`
+	TypeAngsuran  string    `json:"angsuran"`
+	TotalAngsuran int       `json:"total_angsuran"`
+}
+
+type CustomerInnerJoinUser struct {
+	Customers
+	SalesName string `json:"sales_name"`
 }

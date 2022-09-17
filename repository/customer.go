@@ -21,9 +21,10 @@ type CustomerRepository interface {
 	UpdateCustomerAngsuranForThisYear(cus *entity.Customers) error
 	UpdateCustomerSTNKForThisYear(cus *entity.Customers) error
 	UpdateCustomerServiceForThisYear(cus *entity.Customers) error
+	ListAllCustomer(page int, limit int) ([]entity.CustomerInnerJoinUser, error)
 	DeleteCustomer(id int) error
-	FindCustomerBySalesID(sales_id int) ([]entity.Customers, error)
-	FindCustomerByID(customer_id int) (*entity.Customers, error)
+	FindCustomerBySalesID(offset int, total int, sales_id int) ([]entity.Customers, error)
+	FindCustomerByID(customer_id int) (*entity.CustomerInnerJoinUser, error)
 	FindUserBirthdayBy(date *time.Time) ([]entity.Customers, error)
 	FindUserDeadLineAngsuranBy(date *time.Time) ([]entity.Customers, error)
 	FindUserDeadLineSTNKBy(date *time.Time) ([]entity.Customers, error)
@@ -42,6 +43,12 @@ func CustomerRepository_New() CustomerRepository {
 		}
 	}
 	return customerRepository
+}
+
+func (c *CustomerRepositoryImpl) ListAllCustomer(page int, limit int) ([]entity.CustomerInnerJoinUser, error) {
+	data := make([]entity.CustomerInnerJoinUser, 0)
+	err := c.db.Raw("SELECT c.*, u.name as sales_name FROM kala.customers c inner join kala.users u on c.sales_id = u.id ORDER BY id ASC OFFSET ? LIMIT ?", page, limit).Scan(&data)
+	return data, err.Error
 }
 
 func (c *CustomerRepositoryImpl) CreateCustomer(cus *entity.Customers) error {
@@ -68,7 +75,7 @@ func (c *CustomerRepositoryImpl) UpdateCustomerSTNKForThisYear(cus *entity.Custo
 }
 
 func (c *CustomerRepositoryImpl) UpdateCustomer(cus *entity.Customers) error {
-	err := c.db.Model(entity.Users{}).Where("id = ?", cus.ID).Save(cus)
+	err := c.db.Model(entity.Customers{}).Where("id = ?", cus.ID).Updates(cus)
 	return err.Error
 }
 
@@ -77,15 +84,15 @@ func (c *CustomerRepositoryImpl) DeleteCustomer(id int) error {
 	return err.Error
 }
 
-func (c *CustomerRepositoryImpl) FindCustomerBySalesID(sales_id int) ([]entity.Customers, error) {
+func (c *CustomerRepositoryImpl) FindCustomerBySalesID(offset int, total int, sales_id int) ([]entity.Customers, error) {
 	cus := make([]entity.Customers, 0)
-	err := c.db.Where("sales_id = ?", sales_id).Find(&cus)
+	err := c.db.Offset(offset).Limit(total).Where("sales_id = ?", sales_id).Find(&cus)
 	return cus, err.Error
 }
 
-func (c *CustomerRepositoryImpl) FindCustomerByID(customer_id int) (*entity.Customers, error) {
-	cus := entity.Customers{}
-	err := c.db.Where("id = ?", customer_id).First(&cus)
+func (c *CustomerRepositoryImpl) FindCustomerByID(customer_id int) (*entity.CustomerInnerJoinUser, error) {
+	cus := entity.CustomerInnerJoinUser{}
+	err := c.db.Raw("SELECT c.*, u.name as sales_name FROM kala.customers c inner join kala.users u on c.sales_id = u.id WHERE c.id=?", customer_id).Scan(&cus)
 	return &cus, err.Error
 }
 

@@ -10,8 +10,8 @@ import (
 )
 
 type userJSONBinding struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 func RegisterRoutes(c *gin.Engine) {
@@ -45,6 +45,7 @@ func login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, model.HTTPResponse_Data(map[string]string{
 		"token": token,
+		"role":  user.Role,
 	}))
 }
 

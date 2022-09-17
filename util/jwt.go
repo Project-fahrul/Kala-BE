@@ -2,7 +2,6 @@ package util
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -27,7 +26,7 @@ type jwtClaims struct {
 }
 
 func JWT_New(name string, email string, role string, timeOffset int) *JWT {
-	fmt.Println(getSignature())
+	// fmt.Println(getSignature())
 	return &JWT{
 		signature:  getSignature(),
 		timeOffset: timeOffset,
@@ -87,7 +86,7 @@ func (j *JWT) VerifyToken(token string) (*JWT, error) {
 }
 
 func (j *JWT) CheckingThisIsAdmin() error {
-	fmt.Println(strings.ToLower(j.UserRole))
+	// fmt.Println(strings.ToLower(j.UserRole))
 	if strings.ToLower(j.UserRole) == "admin" {
 		return nil
 	}

@@ -1,12 +1,16 @@
 package customer
 
 import (
+	"fmt"
+	"kala/exception"
 	"kala/model"
 	"kala/repository"
 	"kala/repository/entity"
 	"net/http"
 	"strconv"
 	"time"
+
+	ctr "kala/controller/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,10 +27,11 @@ type jsonAddCustomer struct {
 	TypeKendaraan string    `json:"type_kendaraan"`
 	Leasing       string    `json:"leasing"`
 	SalesID       int       `json:"sales_id"`
+	TypeAngsuran  string    `json:"type_angsuran"`
+	TotalAngsuran int       `json:"total_angsuran"`
 }
 
 type jsonUpdateCustomer struct {
-	ID            int       `json:"ID"`
 	Name          string    `json:"name"`
 	Address       string    `json:"address"`
 	NoHp          string    `json:"no_hp"`
@@ -38,13 +43,64 @@ type jsonUpdateCustomer struct {
 	TypeKendaraan string    `json:"type_kendaraan"`
 	Leasing       string    `json:"leasing"`
 	SalesID       int       `json:"sales_id"`
+	TypeAngsuran  string    `json:"type_angsuran"`
+	TotalAngsuran int       `json:"total_angsuran"`
 }
 
 func ResgisterRoutes(c *gin.RouterGroup, ctx *gin.Engine) {
 	c.POST("/customer", createCustomer)
-	c.DELETE("/customer", deleteCustomer)
-	c.GET("/customer/sales/:id", findBySalesID)
+	c.DELETE("/customer/:id", deleteCustomer)
+	c.GET("/customer/sales", findBySalesID)
 	c.GET("/customer/:id", findByCustomerID)
+	c.GET("/customer", listSales)
+	c.PATCH("/customer/:id", editCustomer)
+	// "/customer/all-sales",
+}
+
+func editCustomer(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param(("id")))
+	var data jsonUpdateCustomer
+
+	c.ShouldBindJSON(&data)
+
+	cus, err := repository.CustomerRepository_New().FindCustomerByID(id)
+	exception.ResponseStatusError_New(err)
+
+	customer := cus.Customers
+
+	customer.Address = data.Address
+	customer.Leasing = data.Leasing
+	customer.Name = data.Name
+	customer.NoHp = data.NoHp
+	customer.TglAngsuran = data.TglAngsuran
+	customer.TglDec = data.TglDec
+	customer.TglSTNK = data.TglSTNK
+	customer.TglLahir = data.TglLahir
+	customer.TotalAngsuran = data.TotalAngsuran
+	customer.TypeAngsuran = data.TypeAngsuran
+	customer.TypeKendaraan = data.TypeKendaraan
+	customer.SalesID = data.SalesID
+	fmt.Println(data.TotalAngsuran)
+	err = repository.CustomerRepository_New().UpdateCustomer(&customer)
+	exception.ResponseStatusError_New(err)
+	c.JSON(http.StatusOK, gin.H{})
+}
+
+func listSales(ctx *gin.Context) {
+	page, err := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	if page <= 0 {
+		page = 1
+	}
+	limit, err := strconv.Atoi(ctx.DefaultQuery("limit", "50"))
+
+	if err != nil {
+		limit = 50
+	}
+	page -= 1
+	customers, err := repository.CustomerRepository_New().ListAllCustomer(page*limit, limit)
+	exception.ResponseStatusError_New(err)
+
+	ctx.JSON(http.StatusOK, model.HTTPResponse_Data(customers))
 }
 
 func createCustomer(c *gin.Context) {
@@ -70,6 +126,8 @@ func createCustomer(c *gin.Context) {
 		Leasing:       customer.Leasing,
 		SalesID:       customer.SalesID,
 		NewCustomer:   true,
+		TypeAngsuran:  customer.TypeAngsuran,
+		TotalAngsuran: customer.TotalAngsuran,
 	}
 	err = repository.CustomerRepository_New().CreateCustomer(&cus)
 
@@ -98,14 +156,22 @@ func deleteCustomer(c *gin.Context) {
 }
 
 func findBySalesID(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	_jwt := ctr.GetJWT(c)
+
+	user, err := repository.User_New().FindUserByEmail(_jwt.UserEmail)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
 		return
 	}
 
-	cus, err := repository.CustomerRepository_New().FindCustomerBySalesID(id)
+	total, err := strconv.Atoi(c.DefaultQuery("total", "50"))
+	if err != nil || total == 0 {
+		total = 50
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	cus, err := repository.CustomerRepository_New().FindCustomerBySalesID(offset, total, user.ID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return

@@ -1,9 +1,12 @@
 package controller
 
 import (
-	"fmt"
 	"kala/controller/auth"
+	"kala/controller/customer"
+	"kala/controller/evidance"
+	"kala/controller/notif"
 	"kala/controller/users"
+	"kala/exception"
 	"kala/model"
 	"kala/util"
 	"net/http"
@@ -15,6 +18,7 @@ import (
 
 func RegisterRoute(r *gin.Engine) {
 
+	r.Use(ErrorMiddleware())
 	r.Use(CORSMiddleware())
 	r.Use(timeZone())
 
@@ -23,6 +27,9 @@ func RegisterRoute(r *gin.Engine) {
 
 	users.UserRegisterRoutes(AuthRoute, r)
 	auth.RegisterRoutes(r)
+	customer.ResgisterRoutes(AuthRoute, r)
+	notif.RegisterRoutes(AuthRoute)
+	evidance.RegisterRoutes(AuthRoute)
 }
 
 func JWTMiddleware() gin.HandlerFunc {
@@ -39,7 +46,6 @@ func JWTMiddleware() gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, model.HTTPResponse_Message(err.Error()))
 			return
 		}
-		fmt.Printf("%v", jwt)
 
 		c.Set("auth", jwt)
 		c.Next()
@@ -64,7 +70,7 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, date")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
@@ -72,5 +78,17 @@ func CORSMiddleware() gin.HandlerFunc {
 		}
 
 		c.Next()
+	}
+}
+
+func ErrorMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		defer func() {
+			if err := recover(); err != nil {
+				bindError := err.(exception.ResponseStatusException)
+				ctx.JSON(bindError.Code, bindError.Error.Error())
+			}
+		}()
+		ctx.Next()
 	}
 }
