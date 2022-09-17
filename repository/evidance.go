@@ -49,6 +49,6 @@ func (d *EvidanceRepositoryImpl) Evidance(sales int, customer int, due time.Time
 
 func (d *EvidanceRepositoryImpl) Count() (*model.TotalEvidance, error) {
 	var total model.TotalEvidance
-	err := d.db.Raw("select  sum(case when e.submit_date = null then 0 else 1 end) as send, count(*) as total  from kala.evidances e").Scan(&total)
+	err := d.db.Raw("select  sum(case when e.submit_date notnull then 1 else 0 end) as send, count(*) as total  from kala.evidances e").Scan(&total)
 	return &total, err.Error
 }
