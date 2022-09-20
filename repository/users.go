@@ -16,6 +16,7 @@ type UserRepository interface {
 	FindUserByID(id int) (*entity.Users, error)
 	FindAll(offset int, limit int, role string) ([]entity.Users, error)
 	FindAllSales() ([]model.UserSales, error)
+	FindAllSalesNotVerified() ([]entity.Users, error)
 }
 
 type UserRepositoryImpl struct {
@@ -40,8 +41,18 @@ func (u *UserRepositoryImpl) FindAllSales() ([]model.UserSales, error) {
 	return m, err.Error
 }
 
+func (u *UserRepositoryImpl) FindAllSalesNotVerified() ([]entity.Users, error) {
+	m := make([]entity.Users, 0)
+
+	err := u.db.Where("role = 'admin' and verified = false").Find(&m)
+	return m, err.Error
+}
+
 func (u *UserRepositoryImpl) CreateUser(user *entity.Users) error {
 	err := u.db.Create(user)
+	if err.Error != nil {
+		u.db.Raw("alter sequence kala.customer_seq INCREMENT BY -1")
+	}
 	return err.Error
 }
 

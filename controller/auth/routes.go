@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"fmt"
 	"kala/model"
 	"kala/repository"
+	"kala/service"
 	"kala/util"
 	"net/http"
 
@@ -36,8 +38,17 @@ func login(c *gin.Context) {
 	}
 
 	if !util.Bcrypt_CheckPasswordHash(binding.Password, user.Password) {
-		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message("Password not match"))
+		pass, _ := service.Redis_New().Get(fmt.Sprintf("%s:changePassword", user.Email))
+		if pass != binding.Password {
+			c.JSON(http.StatusBadRequest, model.HTTPResponse_Message("Password not match"))
+			return
+		}
+	}
+
+	if !user.Verified && user.Role == "admin" {
+		c.JSON(http.StatusForbidden, "Your account are not verified")
 		return
+		// exception.ResponseStatusError_New(errors.New("You are not verified yet"))
 	}
 
 	jwt := util.JWT_New(user.Name, user.Email, user.Role, timeOffset)

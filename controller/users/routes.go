@@ -9,8 +9,10 @@ import (
 	"kala/repository/entity"
 	"kala/service"
 	"kala/util"
+	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 
 	ctr "kala/controller/util"
 
@@ -38,6 +40,18 @@ type passwordBindingJSON struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type registerSalesJsonBinding struct {
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	Name        string `json:"name"`
+	PhoneNumber string `json:"phone"`
+}
+
+type changePasswordAdminBinding struct {
+	OldPassword string `json:"oldPassword" binding:"required"`
+	NewPassword string `json:"newPassword" binding:"required"`
+}
+
 const REDIS_TOKEN_EXP = 60 * util.TOKENEXPIRED
 
 func UserRegisterRoutes(c *gin.RouterGroup, ctx *gin.Engine) {
@@ -48,12 +62,107 @@ func UserRegisterRoutes(c *gin.RouterGroup, ctx *gin.Engine) {
 	c.GET("/me", me)
 	c.GET("/user/:id", getUser)
 
-	// ctx.POST("/user/forgot-password", forgotPasswordByEmail)
+	ctx.POST("/user/forgot-password", forgotPasswordByEmail)
 	// ctx.GET("/user/confirm-token", confirmToken)
 	ctx.PATCH("/user/change-password", changePassword)
 	// ctx.POST("/user/confirm-user", sendConfirmAccountToken)
 	ctx.POST("/user/email", userByEmail)
+	ctx.POST("/user/registration", registerSales)
 	c.GET("/user/sales", allSales)
+	c.GET("/user/sales-not-verified", listSalesNotVerified)
+	c.GET("user/verified/:id/:action", userVerified)
+
+	c.PATCH("/user/changePassword/self", changePasswordUser)
+}
+
+func changePasswordUser(c *gin.Context) {
+	var pswd changePasswordAdminBinding
+	err := c.ShouldBindJSON(&pswd)
+
+	exception.ResponseStatusError_New(err)
+	_jwt := ctr.GetJWT(c)
+	user, err := repository.User_New().FindUserByEmail(_jwt.UserEmail)
+	exception.ResponseStatusError_New(err)
+
+	if util.Bcrypt_CheckPasswordHash(pswd.OldPassword, user.Password) {
+		user.Password, err = util.Bcrypt_HashPassword(pswd.NewPassword)
+		exception.ResponseStatusError_New(err)
+		err = repository.User_New().UpdateUser(user)
+		exception.ResponseStatusError_New(err)
+
+		c.JSON(http.StatusOK, gin.H{})
+		return
+	}
+
+	c.JSON(http.StatusBadRequest, gin.H{})
+}
+
+func userVerified(c *gin.Context) {
+	_jwt := ctr.GetJWT(c)
+	if msg := _jwt.CheckingThisIsAdmin(); msg != nil {
+		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(msg.Error()))
+		return
+	}
+
+	id, _ := strconv.Atoi(c.Param("id"))
+	action := c.Param("action")
+
+	if action == "acc" {
+		user, err := repository.User_New().FindUserByID(id)
+		exception.ResponseStatusError_New(err)
+
+		if !user.Verified {
+			user.Verified = true
+			repository.User_New().UpdateUser(user)
+		}
+	} else if action == "del" {
+		repository.User_New().DeleteUsers(id)
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{})
+
+}
+
+func listSalesNotVerified(c *gin.Context) {
+	user, err := repository.User_New().FindAllSalesNotVerified()
+	exception.ResponseStatusError_New(err)
+
+	var inInterface []map[string]interface{}
+	js, err := json.Marshal(&user)
+	err = json.Unmarshal(js, &inInterface)
+	exception.ResponseStatusError_New(err)
+
+	for i := 0; i < len(inInterface); i++ {
+		delete(inInterface[i], "password")
+	}
+
+	c.JSON(http.StatusOK, model.HTTPResponse_Data(inInterface))
+}
+
+func registerSales(c *gin.Context) {
+	var binding registerSalesJsonBinding
+	err := c.ShouldBindJSON(&binding)
+	exception.ResponseStatusError_New(err)
+
+	pass, err := util.Bcrypt_HashPassword(binding.Password)
+	exception.ResponseStatusError_New(err)
+
+	user := entity.Users{
+		Name:        binding.Name,
+		Email:       binding.Email,
+		Verified:    false,
+		Password:    pass,
+		PhoneNumber: binding.PhoneNumber,
+		Role:        "admin",
+	}
+	err = repository.User_New().CreateUser(&user)
+	exception.ResponseStatusError_New(err)
+
+	c.JSON(http.StatusCreated, gin.H{})
+
 }
 
 func getUser(c *gin.Context) {
@@ -141,7 +250,6 @@ func createUserSalesORAdminByAdmin(c *gin.Context) {
 
 func updateUserSalesORAdminByAdmin(c *gin.Context) {
 	var binding createUserJSONBinding
-	fmt.Println("aasaxok")
 	_jwt := ctr.GetJWT(c)
 
 	err := c.ShouldBindJSON(&binding)
@@ -234,6 +342,33 @@ func selectUsers(c *gin.Context) {
 
 }
 
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+func randStringBytesMaskImprSrc(n int) string {
+
+	var src = rand.NewSource(time.Now().UnixNano())
+	b := make([]byte, n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return string(b)
+}
+
 func forgotPasswordByEmail(c *gin.Context) {
 	var binding confirmUserBindingJSON
 
@@ -250,13 +385,12 @@ func forgotPasswordByEmail(c *gin.Context) {
 		return
 	}
 
-	token, err := util.TokenGenerator(util.TOKEN_CHANGE_PASSWORD, user.Email)
-	link := fmt.Sprintf("%s?token=%s", binding.RedirectLink, token)
+	random := randStringBytesMaskImprSrc(12)
 
-	err = service.Redis_New().SetWithExp(fmt.Sprintf("%s:changePassword", user.Email), token, REDIS_TOKEN_EXP)
+	err = service.Redis_New().SetWithExp(fmt.Sprintf("%s:changePassword", user.Email), random, REDIS_TOKEN_EXP)
 
 	if err == nil {
-		err = service.SMTP_New().SendConfirmMail("Lupa Password", user.Email, link)
+		err = service.SMTP_New().SendConfirmMail("Lupa Password", user.Email, fmt.Sprintf("Password sementara anda %s, berlaku selama 5 menit", random))
 	}
 
 	if err != nil {
