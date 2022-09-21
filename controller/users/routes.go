@@ -212,8 +212,10 @@ func me(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, model.HTTPResponse_Data(map[string]interface{}{
-		"name": user.Name,
-		"role": user.Role,
+		"name":  user.Name,
+		"role":  user.Role,
+		"email": user.Email,
+		"id":    user.ID,
 	}))
 }
 
@@ -258,7 +260,7 @@ func updateUserSalesORAdminByAdmin(c *gin.Context) {
 		return
 	}
 
-	if binding.Email == _jwt.UserEmail {
+	if binding.Email != _jwt.UserEmail {
 		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message("You not allowed update user"))
 		return
 	}

@@ -77,10 +77,10 @@ func (r *RedisService) Get(key string) (string, error) {
 	defer conn.Close()
 
 	data, err := conn.Do("GET", key)
-	if err != nil {
+	if err != nil || data == nil {
 		return "", err
 	}
-
+	fmt.Printf("%+v", data)
 	return data.(string), nil
 }
 

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"kala/exception"
 	"kala/model"
 	"kala/repository"
 	"kala/service"
@@ -38,7 +39,8 @@ func login(c *gin.Context) {
 	}
 
 	if !util.Bcrypt_CheckPasswordHash(binding.Password, user.Password) {
-		pass, _ := service.Redis_New().Get(fmt.Sprintf("%s:changePassword", user.Email))
+		pass, err := service.Redis_New().Get(fmt.Sprintf("%s:changePassword", user.Email))
+		exception.ResponseStatusError_New(err)
 		if pass != binding.Password {
 			c.JSON(http.StatusBadRequest, model.HTTPResponse_Message("Password not match"))
 			return
