@@ -61,8 +61,8 @@ func editCustomer(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param(("id")))
 	var data jsonUpdateCustomer
 
-	c.ShouldBindJSON(&data)
-
+	err := c.ShouldBindJSON(&data)
+	exception.ResponseStatusError_New(err)
 	cus, err := repository.CustomerRepository_New().FindCustomerByID(id)
 	exception.ResponseStatusError_New(err)
 
@@ -80,7 +80,8 @@ func editCustomer(c *gin.Context) {
 	customer.TypeAngsuran = data.TypeAngsuran
 	customer.TypeKendaraan = data.TypeKendaraan
 	customer.SalesID = data.SalesID
-	fmt.Println(data.TotalAngsuran)
+	// customer.ID = id
+	fmt.Printf("%+v", customer)
 	err = repository.CustomerRepository_New().UpdateCustomer(&customer)
 	exception.ResponseStatusError_New(err)
 	c.JSON(http.StatusOK, gin.H{})

@@ -51,7 +51,7 @@ func (u *UserRepositoryImpl) FindAllSalesNotVerified() ([]entity.Users, error) {
 func (u *UserRepositoryImpl) CreateUser(user *entity.Users) error {
 	err := u.db.Create(user)
 	if err.Error != nil {
-		u.db.Raw("alter sequence kala.customer_seq INCREMENT BY -1")
+		u.db.Raw("alter sequence kala.user_seq INCREMENT BY -1")
 	}
 	return err.Error
 }

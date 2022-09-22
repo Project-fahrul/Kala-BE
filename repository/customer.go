@@ -53,6 +53,9 @@ func (c *CustomerRepositoryImpl) ListAllCustomer(page int, limit int) ([]entity.
 
 func (c *CustomerRepositoryImpl) CreateCustomer(cus *entity.Customers) error {
 	err := c.db.Create(cus)
+	if err.Error != nil {
+		c.db.Raw("alter sequence kala.customer_seq INCREMENT BY -1")
+	}
 	return err.Error
 }
 
