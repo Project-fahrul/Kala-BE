@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func RegisterRoutes(c *gin.RouterGroup) {
@@ -43,25 +44,43 @@ func uploadFile(c *gin.Context) {
 	sales_id, _ := strconv.Atoi(c.PostForm("sales_id"))
 	message := c.PostForm("message")
 	typeEvidance := c.PostForm("type")
-	// image, err := c.FormFile("image")
+	image, err := c.FormFile("image")
 
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
-	// 	return
-	// }
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
+		return
+	}
 
+	sales, err := repository.User_New().FindUserByID(sales_id)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
+		return
+	}
+
+	id := uuid.New()
+	fileName := fmt.Sprintf("%s-%s-%s", sales.Name, id.String(), image.Filename)
+
+	err = c.SaveUploadedFile(image, "./attachment/"+fileName)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message(err.Error()))
+		return
+	}
+
+	exception.ResponseStatusError_New(err)
 	ev := entity.Evidances{
 		SalesID:      sales_id,
 		CustomerID:   customer_id,
 		SubmitDate:   time.Now(),
 		TypeEvidance: typeEvidance,
 		Comment:      message,
+		Content:      fileName,
 	}
 
-	fmt.Printf("%+v", ev)
-	repository.Notification_New().Delete(ev)
+	// repository.Notification_New().Delete(ev)
 
-	err := repository.EvidanceRepository_New().UploadFile(ev)
+	err = repository.EvidanceRepository_New().UploadFile(ev)
 	exception.ResponseStatusError_New(err)
 	c.JSON(http.StatusCreated, gin.H{})
 }
