@@ -14,6 +14,7 @@ func main() {
 	r := gin.Default()
 	redis := service.Redis_New()
 	r.Use(sessions.Sessions("kala_session", *redis.GetStore()))
+	r.Static("/attachment", "./attachment")
 
 	controller.RegisterRoute(r)
 	r.Run(":8080")

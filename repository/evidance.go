@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"kala/config"
 	"kala/model"
 	"kala/repository/entity"
@@ -39,6 +40,24 @@ func (d *EvidanceRepositoryImpl) ListEvidance() ([]model.ListEvidance, error) {
 	return data, err.Error
 }
 
+func (d *EvidanceRepositoryImpl) ListEvidanceWithLimit(limit int, offset int) ([]model.ListEvidance, error) {
+	data := make([]model.ListEvidance, 0)
+	sql := fmt.Sprintf("select case when e.submit_date notnull then true else false end as submit_date, e.due_date , e.sales_id , e.customer_id , u.name as sales_name, c.name as name, e.type_evidance from kala.evidances e inner join kala.users u on u.id = e.sales_id inner join kala.customers c on c.id = e.customer_id"+
+		" limit %d offset %d", limit, offset)
+	err := d.db.Raw(sql).
+		Scan(&data)
+
+	return data, err.Error
+}
+
+func (d *EvidanceRepositoryImpl) Total() int {
+	var l struct {
+		Total int
+	}
+	d.db.Raw("SELECT COUNT(*) as total FROM kala.evidances").First(&l)
+	return l.Total
+}
+
 func (d *EvidanceRepositoryImpl) Evidance(sales int, customer int, due time.Time, typeEvidance string) (entity.Evidances, error) {
 	var s entity.Evidances
 	err := d.db.Where("sales_id = ? AND customer_id = ? AND due_date = ? AND type_evidance = ?",
@@ -49,6 +68,6 @@ func (d *EvidanceRepositoryImpl) Evidance(sales int, customer int, due time.Time
 
 func (d *EvidanceRepositoryImpl) Count() (*model.TotalEvidance, error) {
 	var total model.TotalEvidance
-	err := d.db.Raw("select  sum(case when e.submit_date notnull then 1 else 0 end) as send, count(*) as total  from kala.evidances e").Scan(&total)
+	err := d.db.Raw("select  sum(case when e.submit_date notnull then 1 else 0 end) as send, count(*) as total, sum(case when e.due_date < now() - interval '6 day' and e.submit_date  is null  then 1 else 0 end) as notsend  from kala.evidances e").Scan(&total)
 	return &total, err.Error
 }

@@ -252,7 +252,7 @@ func createUserSalesORAdminByAdmin(c *gin.Context) {
 
 func updateUserSalesORAdminByAdmin(c *gin.Context) {
 	var binding createUserJSONBinding
-	_jwt := ctr.GetJWT(c)
+	// _jwt := ctr.GetJWT(c)
 
 	err := c.ShouldBindJSON(&binding)
 	if err != nil {
@@ -260,10 +260,10 @@ func updateUserSalesORAdminByAdmin(c *gin.Context) {
 		return
 	}
 
-	if binding.Email != _jwt.UserEmail {
-		c.JSON(http.StatusBadRequest, model.HTTPResponse_Message("You not allowed update user"))
-		return
-	}
+	// if binding.Email != _jwt.UserEmail {
+	// 	c.JSON(http.StatusBadRequest, model.HTTPResponse_Message("You not allowed update user"))
+	// 	return
+	// }
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

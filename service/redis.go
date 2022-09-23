@@ -81,7 +81,7 @@ func (r *RedisService) Get(key string) (string, error) {
 		return "", err
 	}
 	fmt.Printf("%+v", data)
-	return data.(string), nil
+	return string(data.([]byte)), nil
 }
 
 func (r *RedisService) Del(keys ...string) error {

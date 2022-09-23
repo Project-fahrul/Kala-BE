@@ -1,6 +1,7 @@
 package model
 
 type TotalEvidance struct {
-	Total int
-	Send  int
+	Total   int
+	Send    int
+	Notsend int
 }

@@ -76,7 +76,7 @@ func (s *SmtpCredential) composeMessageBody(dest []string, subject string, msg s
 }
 
 func composeMessage(msg string) string {
-	return fmt.Sprintf("<html><body>Untuk Konfirmasi, <a href='%s'>Click Me</a></body></html>", msg)
+	return fmt.Sprintf("<html><body><p>%s</p></body></html>", msg)
 }
 
 func (s *SmtpCredential) sending(dest []string, msg string) error {

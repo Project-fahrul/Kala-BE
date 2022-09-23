@@ -39,7 +39,9 @@ func login(c *gin.Context) {
 	}
 
 	if !util.Bcrypt_CheckPasswordHash(binding.Password, user.Password) {
+		fmt.Println("Tes: " + fmt.Sprintf("%s:changePassword", user.Email))
 		pass, err := service.Redis_New().Get(fmt.Sprintf("%s:changePassword", user.Email))
+		fmt.Println("pass: " + pass)
 		exception.ResponseStatusError_New(err)
 		if pass != binding.Password {
 			c.JSON(http.StatusBadRequest, model.HTTPResponse_Message("Password not match"))

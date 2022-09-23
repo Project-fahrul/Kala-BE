@@ -6,6 +6,7 @@ import (
 	"kala/model"
 	"kala/repository"
 	"kala/repository/entity"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -86,9 +87,30 @@ func uploadFile(c *gin.Context) {
 }
 
 func listEvidance(c *gin.Context) {
-	ev, err := repository.EvidanceRepository_New().ListEvidance()
 
-	fmt.Printf("%v", ev)
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+
+	if limit == 0 {
+		limit = 50
+	}
+	page -= 1
+	if page < 0 {
+		page = 0
+	}
+	offset := page * limit
+	totalData := repository.EvidanceRepository_New().Total()
+
+	ev, err := repository.EvidanceRepository_New().ListEvidanceWithLimit(limit, offset)
+
+	var d struct {
+		TotalPage int
+		Evidance  []model.ListEvidance
+	}
+
+	d.TotalPage = int(math.Ceil(float64(totalData) / float64(limit)))
+	d.Evidance = ev
+
 	exception.ResponseStatusError_New(err)
-	c.JSON(http.StatusOK, model.HTTPResponse_Data(ev))
+	c.JSON(http.StatusOK, model.HTTPResponse_Data(d))
 }
