@@ -79,7 +79,7 @@ func uploadFile(c *gin.Context) {
 		Content:      fileName,
 	}
 
-	// repository.Notification_New().Delete(ev)
+	repository.Notification_New().Delete(ev)
 
 	err = repository.EvidanceRepository_New().UploadFile(ev)
 	exception.ResponseStatusError_New(err)
