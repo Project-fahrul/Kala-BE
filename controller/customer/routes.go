@@ -146,6 +146,9 @@ func deleteCustomer(c *gin.Context) {
 		return
 	}
 
+	repository.Notification_New().DeleteBySalesID(id)
+	repository.EvidanceRepository_New().DeleteBySalesID(id)
+
 	err = repository.CustomerRepository_New().DeleteCustomer(id)
 
 	if err != nil {

@@ -26,6 +26,10 @@ func EvidanceRepository_New() *EvidanceRepositoryImpl {
 	return db
 }
 
+func (d *EvidanceRepositoryImpl) DeleteBySalesID(id int) {
+	d.db.Where("sales_id = ?", id).Delete(&entity.Evidances{})
+}
+
 func (d *EvidanceRepositoryImpl) UploadFile(e entity.Evidances) error {
 	err := d.db.Table("kala.evidances").Model(entity.EvidancesUpdate{}).Where("sales_id = ? and customer_id = ? and type_evidance = ?", e.SalesID, e.CustomerID, e.TypeEvidance).Updates(e)
 	return err.Error
