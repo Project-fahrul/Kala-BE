@@ -26,8 +26,8 @@ func EvidanceRepository_New() *EvidanceRepositoryImpl {
 	return db
 }
 
-func (d *EvidanceRepositoryImpl) DeleteBySalesID(id int) {
-	d.db.Where("sales_id = ?", id).Delete(&entity.Evidances{})
+func (d *EvidanceRepositoryImpl) DeleteByCustomerID(id int) {
+	d.db.Where("customer_id = ?", id).Delete(&entity.Evidances{})
 }
 
 func (d *EvidanceRepositoryImpl) UploadFile(e entity.Evidances) error {

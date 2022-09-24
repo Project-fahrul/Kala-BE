@@ -13,7 +13,7 @@ import (
 type NotificationRepository interface {
 	ListAllNotificationBySalesID(id int) ([]model.ListNotifiation, error)
 	Delete(e entity.Evidances)
-	DeleteBySalesID(id int)
+	DeleteByCustomerID(id int)
 }
 
 type NotificationRepositoryImpl struct {
@@ -37,8 +37,8 @@ func (n *NotificationRepositoryImpl) Delete(e entity.Evidances) {
 	exception.ResponseStatusError_New(err.Error)
 }
 
-func (n *NotificationRepositoryImpl) DeleteBySalesID(id int) {
-	err := n.db.Where("sales_id = ?", id).Delete(entity.Notifications{})
+func (n *NotificationRepositoryImpl) DeleteByCustomerID(id int) {
+	err := n.db.Where("customer_id = ?", id).Delete(entity.Notifications{})
 	exception.ResponseStatusError_New(err.Error)
 }
 

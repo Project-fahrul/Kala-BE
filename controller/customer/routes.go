@@ -146,8 +146,8 @@ func deleteCustomer(c *gin.Context) {
 		return
 	}
 
-	repository.Notification_New().DeleteBySalesID(id)
-	repository.EvidanceRepository_New().DeleteBySalesID(id)
+	repository.Notification_New().DeleteByCustomerID(id)
+	repository.EvidanceRepository_New().DeleteByCustomerID(id)
 
 	err = repository.CustomerRepository_New().DeleteCustomer(id)
 
