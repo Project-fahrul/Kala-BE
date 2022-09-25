@@ -26,6 +26,14 @@ func EvidanceRepository_New() *EvidanceRepositoryImpl {
 	return db
 }
 
+func (n *EvidanceRepositoryImpl) RemoveExpired() {
+	n.db.Raw("DELETE FROM kala.evidances WHERE due_date < NOW() - interval '8 day'")
+}
+
+func (e *EvidanceRepositoryImpl) InsertMany(d []entity.Evidances) error {
+	return e.db.Create(d).Error
+}
+
 func (d *EvidanceRepositoryImpl) DeleteByCustomerID(id int) {
 	d.db.Where("customer_id = ?", id).Delete(&entity.Evidances{})
 }

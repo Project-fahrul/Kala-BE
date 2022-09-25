@@ -14,6 +14,8 @@ type NotificationRepository interface {
 	ListAllNotificationBySalesID(id int) ([]model.ListNotifiation, error)
 	Delete(e entity.Evidances)
 	DeleteByCustomerID(id int)
+	InsertMany(notif []entity.Notifications)
+	RemoveExpired()
 }
 
 type NotificationRepositoryImpl struct {
@@ -30,6 +32,14 @@ func Notification_New() NotificationRepository {
 	}
 
 	return notif
+}
+
+func (n *NotificationRepositoryImpl) InsertMany(notif []entity.Notifications) {
+	n.db.Create(notif)
+}
+
+func (n *NotificationRepositoryImpl) RemoveExpired() {
+	n.db.Raw("DELETE FROM kala.notifications WHERE due_date < NOW() - interval '8 day'")
 }
 
 func (n *NotificationRepositoryImpl) Delete(e entity.Evidances) {

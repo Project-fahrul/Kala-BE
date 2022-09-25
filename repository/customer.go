@@ -3,7 +3,6 @@ package repository
 import (
 	"kala/config"
 	"kala/repository/entity"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -25,10 +24,10 @@ type CustomerRepository interface {
 	DeleteCustomer(id int) error
 	FindCustomerBySalesID(offset int, total int, sales_id int) ([]entity.Customers, error)
 	FindCustomerByID(customer_id int) (*entity.CustomerInnerJoinUser, error)
-	FindUserBirthdayBy(date *time.Time) ([]entity.Customers, error)
-	FindUserDeadLineAngsuranBy(date *time.Time) ([]entity.Customers, error)
-	FindUserDeadLineSTNKBy(date *time.Time) ([]entity.Customers, error)
-	FindUserDeadLineServiceBy(date *time.Time) ([]entity.Customers, error)
+	FindUserBirthday() ([]entity.Customers, error)
+	FindUserDeadLineAngsuran() ([]entity.Customers, error)
+	FindUserDeadLineSTNK() ([]entity.Customers, error)
+	FindUserDeadLineService() ([]entity.Customers, error)
 	TotalCustomerBySalesID(id int) int
 	Total() int
 }
@@ -116,33 +115,30 @@ func (c *CustomerRepositoryImpl) FindCustomerByID(customer_id int) (*entity.Cust
 	return &cus, err.Error
 }
 
-func (c *CustomerRepositoryImpl) FindUserBirthdayBy(date *time.Time) ([]entity.Customers, error) {
+func (c *CustomerRepositoryImpl) FindUserBirthday() ([]entity.Customers, error) {
 	cus := make([]entity.Customers, 0)
 	sql := "SELECT * FROM kala.customers cus WHERE EXTRACT( DAY FROM cus.tgl_lahir) = EXTRACT( DAY FROM NOW()) AND EXTRACT( MONTH FROM cus.tgl_lahir) = EXTRACT( MONTH FROM NOW())"
 	err := c.db.Raw(sql).Scan(&cus)
 	return cus, err.Error
 }
 
-func (c *CustomerRepositoryImpl) FindUserDeadLineAngsuranBy(date *time.Time) ([]entity.Customers, error) {
+func (c *CustomerRepositoryImpl) FindUserDeadLineAngsuran() ([]entity.Customers, error) {
 	cus := make([]entity.Customers, 0)
 	sql := "SELECT * FROM kala.customers cus WHERE cus.tgl_angsuran BETWEEN NOW() AND NOW() + interval '3 day'"
 	err := c.db.Raw(sql).Scan(&cus)
 	return cus, err.Error
 }
 
-func (c *CustomerRepositoryImpl) FindUserDeadLineSTNKBy(date *time.Time) ([]entity.Customers, error) {
+func (c *CustomerRepositoryImpl) FindUserDeadLineSTNK() ([]entity.Customers, error) {
 	cus := make([]entity.Customers, 0)
 	sql := "SELECT * FROM kala.customers cus WHERE cus.tgl_stnk BETWEEN NOW() AND NOW() + interval '7 day'"
 	err := c.db.Raw(sql).Scan(&cus)
 	return cus, err.Error
 }
 
-func (c *CustomerRepositoryImpl) FindUserDeadLineServiceBy(date *time.Time) ([]entity.Customers, error) {
+func (c *CustomerRepositoryImpl) FindUserDeadLineService() ([]entity.Customers, error) {
 	cus := make([]entity.Customers, 0)
-	sql := "SELECT * FROM kala.customers cus WHERE " +
-		"(cus.new_customer == true AND cus.tgl_service + INTERVAL '1 MONTH' BETWEEN NOW() AND NOW() + INTERVAL '3 day')" +
-		" OR " +
-		"(cus.tgl_service BETWEEN NOW() AND NOW() + INTERVAL '3 day'))"
+	sql := "SELECT * FROM kala.customers cus WHERE cus.tgl_dec BETWEEN NOW() AND NOW() + interval '3 day'"
 	err := c.db.Raw(sql).Scan(&cus)
 	return cus, err.Error
 }
