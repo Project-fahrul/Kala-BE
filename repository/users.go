@@ -15,8 +15,9 @@ type UserRepository interface {
 	FindUserByEmail(email string) (*entity.Users, error)
 	FindUserByID(id int) (*entity.Users, error)
 	FindAll(offset int, limit int, role string) ([]entity.Users, error)
-	FindAllSales() ([]model.UserSales, error)
+	FindAllSales(limit int, offset int) ([]model.UserSales, error)
 	FindAllSalesNotVerified() ([]entity.Users, error)
+	Total() int
 }
 
 type UserRepositoryImpl struct {
@@ -34,10 +35,19 @@ func User_New() UserRepository {
 	return userRepository
 }
 
-func (u *UserRepositoryImpl) FindAllSales() ([]model.UserSales, error) {
+func (u *UserRepositoryImpl) Total() int {
+	var d struct {
+		Total int
+	}
+	u.db.Raw("select count(xxx.*) as Total from (SELECT u.id , u.name, u.email, u.phone_number, count(e.*) as total_evidance, sum(case when e.submit_date notnull then 1 else 0 end) as progress  FROM kala.users u left join kala.evidances e on e.sales_id = u.id  where  u.role = 'sales' group by u.id) xxx").
+		First(&d)
+	return d.Total
+}
+
+func (u *UserRepositoryImpl) FindAllSales(limit int, offset int) ([]model.UserSales, error) {
 	m := make([]model.UserSales, 0)
 
-	err := u.db.Raw("SELECT u.id , u.name, u.email, u.phone_number, count(e.*) as total_evidance, sum(case when e.submit_date notnull then 1 else 0 end) as progress  FROM kala.users u left join kala.evidances e on e.sales_id = u.id  where  u.role = 'sales' group by u.id").Scan(&m)
+	err := u.db.Raw("select * from (SELECT u.id , u.name, u.email, u.phone_number, count(e.*) as total_evidance, sum(case when e.submit_date notnull then 1 else 0 end) as progress  FROM kala.users u left join kala.evidances e on e.sales_id = u.id  where  u.role = 'sales' group by u.id) xxx order by xxx.id desc limit ? offset ?", limit, offset).Scan(&m)
 	return m, err.Error
 }
 

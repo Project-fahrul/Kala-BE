@@ -29,6 +29,8 @@ type CustomerRepository interface {
 	FindUserDeadLineAngsuranBy(date *time.Time) ([]entity.Customers, error)
 	FindUserDeadLineSTNKBy(date *time.Time) ([]entity.Customers, error)
 	FindUserDeadLineServiceBy(date *time.Time) ([]entity.Customers, error)
+	TotalCustomerBySalesID(id int) int
+	Total() int
 }
 
 var customerRepository *CustomerRepositoryImpl = nil
@@ -43,6 +45,21 @@ func CustomerRepository_New() CustomerRepository {
 		}
 	}
 	return customerRepository
+}
+
+func (c *CustomerRepositoryImpl) TotalCustomerBySalesID(id int) int {
+	var d struct {
+		Total int
+	}
+	c.db.Raw("SELECT COUNT(*) as total FROM kala.customers WHERE sales_id = ?", id).First(&d)
+	return d.Total
+}
+func (c *CustomerRepositoryImpl) Total() int {
+	var d struct {
+		Total int
+	}
+	c.db.Raw("SELECT COUNT(*) as total FROM kala.customers").First(&d)
+	return d.Total
 }
 
 func (c *CustomerRepositoryImpl) ListAllCustomer(page int, limit int) ([]entity.CustomerInnerJoinUser, error) {
@@ -89,7 +106,7 @@ func (c *CustomerRepositoryImpl) DeleteCustomer(id int) error {
 
 func (c *CustomerRepositoryImpl) FindCustomerBySalesID(offset int, total int, sales_id int) ([]entity.Customers, error) {
 	cus := make([]entity.Customers, 0)
-	err := c.db.Offset(offset).Limit(total).Where("sales_id = ?", sales_id).Find(&cus)
+	err := c.db.Where("sales_id = ?", sales_id).Limit(total).Offset(offset).Find(&cus)
 	return cus, err.Error
 }
 

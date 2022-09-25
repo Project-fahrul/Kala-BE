@@ -9,6 +9,7 @@ import (
 	"kala/repository/entity"
 	"kala/service"
 	"kala/util"
+	"math"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -174,10 +175,31 @@ func getUser(c *gin.Context) {
 }
 
 func allSales(c *gin.Context) {
-	sales, err := repository.User_New().FindAllSales()
-	exception.ResponseStatusError_New(err)
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	c.JSON(http.StatusOK, model.HTTPResponse_Data(sales))
+	if limit == 0 {
+		limit = 50
+	}
+	page -= 1
+	if page < 0 {
+		page = 0
+	}
+	offset := page * limit
+
+	sales, err := repository.User_New().FindAllSales(limit, offset)
+	exception.ResponseStatusError_New(err)
+	totalData := repository.User_New().Total()
+
+	var d struct {
+		TotalPage int
+		Sales     []model.UserSales
+	}
+
+	d.TotalPage = int(math.Ceil(float64(totalData) / float64(limit)))
+	d.Sales = sales
+
+	c.JSON(http.StatusOK, model.HTTPResponse_Data(d))
 }
 
 func userByEmail(c *gin.Context) {

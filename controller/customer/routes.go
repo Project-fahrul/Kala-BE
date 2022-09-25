@@ -6,6 +6,7 @@ import (
 	"kala/model"
 	"kala/repository"
 	"kala/repository/entity"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -52,7 +53,7 @@ func ResgisterRoutes(c *gin.RouterGroup, ctx *gin.Engine) {
 	c.DELETE("/customer/:id", deleteCustomer)
 	c.GET("/customer/sales", findBySalesID)
 	c.GET("/customer/:id", findByCustomerID)
-	c.GET("/customer", listSales)
+	c.GET("/customer", listCustomer)
 	c.PATCH("/customer/:id", editCustomer)
 	// "/customer/all-sales",
 }
@@ -87,7 +88,7 @@ func editCustomer(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
-func listSales(ctx *gin.Context) {
+func listCustomer(ctx *gin.Context) {
 	page, err := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	if page <= 0 {
 		page = 1
@@ -100,8 +101,17 @@ func listSales(ctx *gin.Context) {
 	page -= 1
 	customers, err := repository.CustomerRepository_New().ListAllCustomer(page*limit, limit)
 	exception.ResponseStatusError_New(err)
+	totalData := repository.CustomerRepository_New().Total()
 
-	ctx.JSON(http.StatusOK, model.HTTPResponse_Data(customers))
+	var d struct {
+		TotalPage int
+		Customer  []entity.CustomerInnerJoinUser
+	}
+
+	d.TotalPage = int(math.Ceil(float64(totalData) / float64(limit)))
+	d.Customer = customers
+
+	ctx.JSON(http.StatusOK, model.HTTPResponse_Data(d))
 }
 
 func createCustomer(c *gin.Context) {
@@ -169,19 +179,35 @@ func findBySalesID(c *gin.Context) {
 		return
 	}
 
-	total, err := strconv.Atoi(c.DefaultQuery("total", "50"))
-	if err != nil || total == 0 {
-		total = 50
-	}
-	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	cus, err := repository.CustomerRepository_New().FindCustomerBySalesID(offset, total, user.ID)
+	if limit == 0 {
+		limit = 50
+	}
+	page -= 1
+	if page < 0 {
+		page = 0
+	}
+	offset := page * limit
+
+	cus, err := repository.CustomerRepository_New().FindCustomerBySalesID(offset, limit, user.ID)
+	totalData := repository.CustomerRepository_New().TotalCustomerBySalesID(user.ID)
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, model.HTTPResponse_Data(cus))
+	var d struct {
+		TotalPage int
+		Customer  []entity.Customers
+	}
+
+	d.TotalPage = int(math.Ceil(float64(totalData) / float64(limit)))
+	d.Customer = cus
+
+	c.JSON(http.StatusOK, model.HTTPResponse_Data(d))
 }
 
 func findByCustomerID(c *gin.Context) {
