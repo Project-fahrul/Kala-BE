@@ -413,13 +413,9 @@ func forgotPasswordByEmail(c *gin.Context) {
 
 	err = service.Redis_New().SetWithExp(fmt.Sprintf("%s:changePassword", user.Email), random, REDIS_TOKEN_EXP)
 
-	fmt.Printf("Redis: %+v\n", err)
-
-	if err == nil {
+		if err == nil {
 		err = service.SMTP_New().SendConfirmMail("Lupa Password", user.Email, fmt.Sprintf("Password sementara anda %s, berlaku selama 5 menit", random))
 	}
-
-	fmt.Printf("SMTP: %+v\n", err)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.HTTPResponse_Message(err.Error()))
