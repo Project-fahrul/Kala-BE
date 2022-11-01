@@ -34,6 +34,23 @@ func (e *EvidanceRepositoryImpl) InsertMany(d []entity.Evidances) error {
 	return e.db.Create(d).Error
 }
 
+func (e *EvidanceRepositoryImpl) InsertEvidance(d []entity.Evidances) error {
+	var test entity.Evidances
+	var evi entity.Evidances
+	for _, evi = range d {
+		res := e.db.Where("sales_id = ? and customer_id = ? and type_evidance = ? and due_date = ?", evi.SalesID, evi.CustomerID, evi.TypeEvidance, evi.DueDate).First(&test)
+		if res.Error != nil && res.Error.Error() == "record not found" {
+			e.db.Table("kala.evidances").Create(entity.InsertEvidances{
+				SalesID:      evi.SalesID,
+				CustomerID:   evi.CustomerID,
+				DueDate:      evi.DueDate,
+				TypeEvidance: evi.TypeEvidance,
+			})
+		}
+	}
+	return nil
+}
+
 func (d *EvidanceRepositoryImpl) DeleteByCustomerID(id int) {
 	d.db.Where("customer_id = ?", id).Delete(&entity.Evidances{})
 }

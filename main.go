@@ -1,11 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"kala/config"
 	"kala/controller"
 	"kala/service"
 	"time"
-	"fmt"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -20,13 +20,15 @@ func main() {
 	r.Static("/attachment", "./attachment")
 
 	s := gocron.NewScheduler(time.UTC)
-	//s.Every(1).Day().At("07:00").Do(func() {
-	s.Every(90).Seconds().Do(func(){
-		fmt.Println("create evidance");
+	s.Every(1).Day().At("07:00").Do(func() {
+		// s.Every(90).Seconds().Do(func() {
+		fmt.Println("create evidance")
 		service.GenerateAllEvidance()
 	})
 	s.StartAsync()
 
 	controller.RegisterRoute(r)
 	r.Run(":8080")
+	fmt.Println("Stoped")
+	s.Stop()
 }

@@ -17,3 +17,10 @@ type EvidancesUpdate struct {
 	Content    string    `json:"content"`
 	Comment    string    `json:"comment"`
 }
+
+type InsertEvidances struct {
+	SalesID      int       `json:"sales_id"`
+	CustomerID   int       `json:"customer_id"`
+	DueDate      time.Time `json:"due_date"`
+	TypeEvidance string    `json:"type_evidance"`
+}

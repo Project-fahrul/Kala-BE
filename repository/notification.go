@@ -35,7 +35,13 @@ func Notification_New() NotificationRepository {
 }
 
 func (n *NotificationRepositoryImpl) InsertMany(notif []entity.Notifications) {
-	n.db.Create(notif)
+	var test entity.Notifications
+	for _, note := range notif {
+		res := n.db.Where("customer_id = ? and due_date = ? and sales_id = ? and type_notification = ?", note.CustomerID, note.DueDate, note.SalesID, note.TypeNotification).First(&test)
+		if res.Error != nil && res.Error.Error() == "record not found" {
+			n.db.Create(note)
+		}
+	}
 }
 
 func (n *NotificationRepositoryImpl) RemoveExpired() {

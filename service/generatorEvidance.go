@@ -5,7 +5,6 @@ import (
 	"kala/repository"
 	"kala/repository/entity"
 	"time"
-	"fmt"
 )
 
 func GenerateAllEvidance() {
@@ -14,14 +13,10 @@ func GenerateAllEvidance() {
 	allCustomer, err := repository.CustomerRepository_New().FindUserBirthday()
 	exception.ResponseStatusError_New(err)
 	allEvidance = append(allEvidance, sliceCustomerToEvidance(allCustomer, "birthday")...)
-	
 
 	allCustomer, err = repository.CustomerRepository_New().FindUserDeadLineAngsuran()
 	exception.ResponseStatusError_New(err)
 	allEvidance = append(allEvidance, sliceCustomerToEvidance(allCustomer, "angsuran")...)
-	fmt.Printf("%+v\n", allEvidance)
-	return
-
 
 	allCustomer, err = repository.CustomerRepository_New().FindUserDeadLineSTNK()
 	exception.ResponseStatusError_New(err)
@@ -31,7 +26,7 @@ func GenerateAllEvidance() {
 	exception.ResponseStatusError_New(err)
 	allEvidance = append(allEvidance, sliceCustomerToEvidance(allCustomer, "service")...)
 
-	repository.EvidanceRepository_New().InsertMany(allEvidance)
+	repository.EvidanceRepository_New().InsertEvidance(allEvidance)
 	repository.Notification_New().InsertMany(sliceEvidanceToNotif(allEvidance))
 
 	repository.EvidanceRepository_New().RemoveExpired()
