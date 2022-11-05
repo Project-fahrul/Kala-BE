@@ -38,7 +38,7 @@ func (e *EvidanceRepositoryImpl) InsertEvidance(d []entity.Evidances) error {
 	var test entity.Evidances
 	var evi entity.Evidances
 	for _, evi = range d {
-		res := e.db.Where("sales_id = ? and customer_id = ? and type_evidance = ? and due_date = ?", evi.SalesID, evi.CustomerID, evi.TypeEvidance, evi.DueDate).First(&test)
+		res := e.db.Where("sales_id = ? and customer_id = ? and type_evidance = ?", evi.SalesID, evi.CustomerID, evi.TypeEvidance).First(&test)
 		if res.Error != nil && res.Error.Error() == "record not found" {
 			e.db.Table("kala.evidances").Create(entity.InsertEvidances{
 				SalesID:      evi.SalesID,
