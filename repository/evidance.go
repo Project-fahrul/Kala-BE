@@ -34,6 +34,12 @@ func (e *EvidanceRepositoryImpl) InsertMany(d []entity.Evidances) error {
 	return e.db.Create(d).Error
 }
 
+func (e *EvidanceRepositoryImpl) SelectBySalesIdAndCustomerIdAndTypeEvidance(evi entity.Evidances) (*entity.Evidances, error) {
+	var test entity.Evidances
+	res := e.db.Where("sales_id = ? and customer_id = ? and type_evidance = ?", evi.SalesID, evi.CustomerID, evi.TypeEvidance).First(&test)
+	return &test, res.Error
+}
+
 func (e *EvidanceRepositoryImpl) InsertEvidance(d []entity.Evidances) error {
 	var test entity.Evidances
 	var evi entity.Evidances

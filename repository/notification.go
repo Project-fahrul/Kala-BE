@@ -12,10 +12,11 @@ import (
 
 type NotificationRepository interface {
 	ListAllNotificationBySalesID(id int) ([]model.ListNotifiation, error)
-	Delete(e entity.Evidances)
+	Delete(e entity.Notifications)
 	DeleteByCustomerID(id int)
 	InsertMany(notif []entity.Notifications)
 	RemoveExpired()
+	All() []entity.Notifications
 }
 
 type NotificationRepositoryImpl struct {
@@ -34,6 +35,12 @@ func Notification_New() NotificationRepository {
 	return notif
 }
 
+func (n *NotificationRepositoryImpl) All() []entity.Notifications {
+	var data []entity.Notifications
+	n.db.Find(&data)
+	return data
+}
+
 func (n *NotificationRepositoryImpl) InsertMany(notif []entity.Notifications) {
 	var test entity.Notifications
 	for _, note := range notif {
@@ -45,11 +52,12 @@ func (n *NotificationRepositoryImpl) InsertMany(notif []entity.Notifications) {
 }
 
 func (n *NotificationRepositoryImpl) RemoveExpired() {
+
 	n.db.Raw("DELETE FROM kala.notifications WHERE due_date < NOW() - interval '8 day'")
 }
 
-func (n *NotificationRepositoryImpl) Delete(e entity.Evidances) {
-	err := n.db.Where("sales_id = ? and customer_id = ? and type_notification = ?", e.SalesID, e.CustomerID, e.TypeEvidance).Delete(entity.Notifications{})
+func (n *NotificationRepositoryImpl) Delete(e entity.Notifications) {
+	err := n.db.Where("sales_id = ? and customer_id = ? and type_notification = ?", e.SalesID, e.CustomerID, e.TypeNotification).Delete(entity.Notifications{})
 	exception.ResponseStatusError_New(err.Error)
 }
 
