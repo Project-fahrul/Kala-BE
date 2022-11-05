@@ -38,7 +38,7 @@ func GenerateAllEvidance() {
 	notifs := repository.Notification_New().All()
 	notSync := make([]entity.Notifications, 0)
 	for _, n := range notifs {
-		_, err := repository.EvidanceRepository_New().SelectBySalesIdAndCustomerIdAndTypeEvidanceAndNotSubmit(entity.Evidances{
+		d, err := repository.EvidanceRepository_New().SelectBySalesIdAndCustomerIdAndTypeEvidance(entity.Evidances{
 			SalesID:      n.SalesID,
 			CustomerID:   n.CustomerID,
 			TypeEvidance: n.TypeNotification,
@@ -47,6 +47,11 @@ func GenerateAllEvidance() {
 		// notif and evidance not sync
 		if err != nil {
 			notSync = append(notSync, n)
+		} else {
+			d, err = repository.EvidanceRepository_New().SelectBySalesIdAndCustomerIdAndTypeEvidanceAndSubmit(*d)
+			if err == nil {
+				notSync = append(notSync, n)
+			}
 		}
 	}
 
