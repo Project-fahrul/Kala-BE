@@ -20,6 +20,7 @@ func main() {
 	r.Static("/attachment", "./attachment")
 
 	s := gocron.NewScheduler(time.UTC)
+	service.GenerateAllEvidance()
 	s.Every(1).Day().At("07:00").Do(func() {
 		// s.Every(90).Seconds().Do(func() {
 		fmt.Println("create evidance")

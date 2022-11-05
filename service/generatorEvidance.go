@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"kala/exception"
 	"kala/repository"
 	"kala/repository/entity"
@@ -33,6 +34,7 @@ func GenerateAllEvidance() {
 	repository.Notification_New().RemoveExpired()
 
 	//sync evidance and notif
+	fmt.Println("Sync")
 	notifs := repository.Notification_New().All()
 	notSync := make([]entity.Notifications, 0)
 	for _, n := range notifs {
