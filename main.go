@@ -15,6 +15,7 @@ import (
 func main() {
 	config.LoadEnvirolment()
 	r := gin.Default()
+	r.MaxMultipartMemory = 8 << 20 // 8 MiB
 	redis := service.Redis_New()
 	r.Use(sessions.Sessions("kala_session", *redis.GetStore()))
 	r.Static("/attachment", "./attachment")
